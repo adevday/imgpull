@@ -9,42 +9,47 @@ on:
       - master
 
 jobs:
-  cross-build:
-    runs-on: ubuntu-latest
+  release:
+    name: Release - ${{ matrix.platform.os-name }}
     strategy:
       matrix:
-        platform: [linux, windows, macos]
-        arch: [amd64, arm64]
+        platform:
+          - os-name: FreeBSD-x86_64
+            runs-on: ubuntu-20.04
+            target: x86_64-unknown-freebsd
+            skip_tests: true
 
+          - os-name: Linux-x86_64
+            runs-on: ubuntu-20.04
+            target: x86_64-unknown-linux-musl
+
+          - os-name: Linux-aarch64
+            runs-on: ubuntu-20.04
+            target: aarch64-unknown-linux-musl
+
+          - os-name: Linux-riscv64
+            runs-on: ubuntu-20.04
+            target: riscv64gc-unknown-linux-gnu
+
+          - os-name: Windows-x86_64
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+
+          - os-name: macOS-x86_64
+            runs-on: macOS-latest
+            target: x86_64-apple-darwin
+
+    runs-on: ${{ matrix.platform.runs-on }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Install cross
-        run: cargo install cross
-
-      - name: Cross-build for ${{ matrix.platform }}-${{ matrix.arch }}
-        run: |
-          case ${{ matrix.platform }}-${{ matrix.arch }} in
-            linux-amd64)
-              cross build --release --target x86_64-unknown-linux-gnu
-              ;;
-            linux-arm64)
-              cross build --release --target aarch64-unknown-linux-gnu
-              ;;
-            windows-amd64)
-              cross build --release --target x86_64-pc-windows-gnu
-              ;;
-            windows-arm64)
-              cross build --release --target aarch64-pc-windows-gnu
-              ;;
-            macos-amd64)
-              cross build --release --target x86_64-apple-darwin
-              ;;
-            macos-arm64)
-              cross build --release --target aarch64-apple-darwin
-              ;;
-          esac
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: ${{ matrix.platform.command }}
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release"
+          strip: true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
