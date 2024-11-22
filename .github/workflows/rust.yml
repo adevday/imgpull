@@ -1,0 +1,53 @@
+name: Cross-Build Rust Program
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  cross-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux, windows, macos]
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install cross
+        run: cargo install cross
+
+      - name: Cross-build for ${{ matrix.platform }}-${{ matrix.arch }}
+        run: |
+          case ${{ matrix.platform }}-${{ matrix.arch }} in
+            linux-amd64)
+              cross build --target x86_64-unknown-linux-gnu
+              ;;
+            linux-arm64)
+              cross build --target aarch64-unknown-linux-gnu
+              ;;
+            windows-amd64)
+              cross build --target x86_64-pc-windows-gnu
+              ;;
+            windows-arm64)
+              cross build --target aarch64-pc-windows-gnu
+              ;;
+            macos-amd64)
+              cross build --target x86_64-apple-darwin
+              ;;
+            macos-arm64)
+              cross build --target aarch64-apple-darwin
+              ;;
+          esac
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: target/${{ matrix.platform }}-${{ matrix.arch }}/debug
