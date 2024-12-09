@@ -2,9 +2,6 @@ use std::borrow::Cow;
 use std::env::temp_dir;
 use std::error::Error;
 use std::fs::File;
-use std::sync::Arc;
-
-
 
 use argh::FromArgs;
 use kdam::{tqdm, BarExt};
@@ -18,14 +15,16 @@ use std::process::exit;
 use std::{fs, str};
 use ureq::Agent;
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
-
+#[cfg(target_os = "linux")]
+static AGENT: Lazy<Agent> =
+    Lazy::new(|| ureq::AgentBuilder::new().try_proxy_from_env(true).build());
+#[cfg(not(target_os = "linux"))]
 static AGENT: Lazy<Agent> = Lazy::new(|| {
     ureq::AgentBuilder::new()
-        .tls_connector(Arc::new(native_tls::TlsConnector::new().unwrap()))
+        .tls_connector(std::sync::Arc::new(native_tls::TlsConnector::new().unwrap()))
         .try_proxy_from_env(true)
         .build()
 });
-
 #[derive(FromArgs, Debug)]
 #[argh(example = "
 # Download a single image and save as a tar file

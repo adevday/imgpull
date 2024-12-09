@@ -18,9 +18,9 @@ jobs:
           #   runs-on: ubuntu-20.04
           #   target: aarch64-unknown-linux-musl
 
-          # - os-name: Linux-x86_64
-          #   runs-on: ubuntu-20.04
-          #   target: x86_64-unknown-linux-musl
+          - os-name: Linux-x86_64
+            runs-on: ubuntu-20.04
+            target: x86_64-unknown-linux-musl
 
           - os-name: Windows-i686
             runs-on: windows-latest
@@ -44,11 +44,31 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
 
+      - name: Setup musl (Linux)
+        if: ${{ matrix.platform.target == 'x86_64-unknown-linux-musl' }} 
+        run: |
+          sudo apt install -y musl-tools
+
+      - name: Setup musl (Linux aarch64)
+        if: ${{ matrix.platform.target == 'aarch64-unknown-linux-musl' }} 
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo apt update
+          sudo apt install -y musl-tools:arm64 lld
+        
       - name: Build binary
-        run:  cargo build --target ${{ matrix.platform.target }}
+        run:  cargo build --release --target ${{ matrix.platform.target }}
 
       - name: Upload artifacts
+        if: ${{ matrix.platform.target != 'i686-pc-windows-msvc' }} 
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform.target }}
           path: target/${{ matrix.platform.target }}/release/imgpull
+
+      - name: Upload artifacts
+        if: ${{ matrix.platform.target == 'i686-pc-windows-msvc' }} 
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform.target }}
+          path: target/${{ matrix.platform.target }}/release/imgpull.exe
