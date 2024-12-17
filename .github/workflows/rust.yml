@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - "v*.*.*"
   pull_request:
     branches:
       - master
@@ -33,7 +35,8 @@ jobs:
           - os-name: macOS-x86_64
             runs-on: macos-latest
             target: x86_64-apple-darwin
-
+    permissions:
+      contents: write
     runs-on: ${{ matrix.platform.runs-on }}
     steps:
       - name: Checkout
@@ -72,3 +75,14 @@ jobs:
         with:
           name: ${{ matrix.platform.target }}
           path: target/${{ matrix.platform.target }}/release/imgpull.exe
+      
+      - uses: actions/download-artifact@v4
+        if: ${{ matrix.platform.runs-on == 'ubuntu-20.04' }} 
+        with: 
+          path: artifacts
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') && matrix.platform.runs-on == 'ubuntu-20.04'
+        with:
+          files: artifacts/*
